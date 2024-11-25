@@ -20,6 +20,9 @@
       status: "success",
     });
 
+  // Получаем адрес сервера из переменной окружения
+  const SERVER_URL = process.env.SERVER || "http://localhost:3000"; // Подставляем значение, если переменная не задана
+
   new Vue({
     el: "#app",
     data: {
@@ -31,7 +34,7 @@
       createTimer() {
         const description = this.desc;
         this.desc = "";
-        fetch(`/api/timers`, {
+        fetch(`${SERVER_URL}/api/timers`, { // Используем SERVER_URL
           method: "post",
           headers: {
             "Content-Type": "application/json",
@@ -40,21 +43,21 @@
           body: JSON.stringify({ userId: window.USER_ID, description }),
         })
         .then(response => {
-        if (!response.ok) {
+          if (!response.ok) {
             alert(`Error creating timer: ${response.statusText}`);
             throw new Error("Failed to create timer");
-        }
-        return response.json();
+          }
+          return response.json();
         })
         .then(() => {
-        info(`Created new timer "${description}"`);
+          info(`Created new timer "${description}"`);
         })
         .catch((err) => {
-        alert(err.message); // Используем alert для обработки ошибок
+          alert(err.message);
         });
       },
       stopTimer(id) {
-        fetch(`/api/timers/${id}/stop`, {
+        fetch(`${SERVER_URL}/api/timers/${id}/stop`, { // Используем SERVER_URL
           method: "post",
           headers: {
             "Authorization": `Bearer ${window.AUTH_TOKEN}`,
@@ -79,10 +82,9 @@
       },
     },
     created() {
-      const ws = new WebSocket("ws://localhost:3000"); // Подключение к WebSocket
+      const ws = new WebSocket(`${SERVER_URL.replace("http", "ws")}`); // Подключение к WebSocket, заменяем http на ws
 
       ws.onopen = () => {
-        // Отправка сообщения об аутентификации
         ws.send(JSON.stringify({ action: "authenticate", sessionId: window.AUTH_TOKEN }));
       };
 
@@ -93,10 +95,9 @@
           this.activeTimers = data.payload.filter(timer => timer.isActive);
         } else if (data.type === "active_timers") {
           data.payload.forEach(timer => {
-            // Обновляем активные таймеры с актуальными данными
             const existingTimer = this.activeTimers.find(t => t.id === timer.id);
             if (existingTimer) {
-              existingTimer.progress = timer.progress; // Обновляем прогресс
+              existingTimer.progress = timer.progress;
             } else {
               this.activeTimers.push(timer);
             }
